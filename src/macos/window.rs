@@ -17,7 +17,10 @@ use keyboard_types::KeyboardEvent;
 
 use objc::{msg_send, runtime::Object, sel, sel_impl};
 
-use raw_window_handle::{AppKitHandle, HasRawWindowHandle, RawWindowHandle};
+use raw_window_handle::{
+    AppKitDisplayHandle, AppKitWindowHandle, HasRawDisplayHandle, HasRawWindowHandle,
+    RawDisplayHandle, RawWindowHandle,
+};
 
 use crate::{
     Event, EventStatus, Size, WindowEvent, WindowHandler, WindowInfo, WindowOpenOptions,
@@ -62,7 +65,7 @@ unsafe impl HasRawWindowHandle for WindowHandle {
             }
         }
 
-        RawWindowHandle::AppKit(AppKitHandle::empty())
+        RawWindowHandle::AppKit(AppKitWindowHandle::empty())
     }
 }
 
@@ -371,6 +374,7 @@ impl WindowState {
     /// Don't use this to create two simulataneous references to a single
     /// WindowState. Apparently, macOS blocks for the duration of an event,
     /// callback, meaning that this shouldn't be a problem in practice.
+    #[allow(clippy::mut_from_ref)]
     pub(super) unsafe fn from_field(obj: &Object) -> &mut Self {
         let state_ptr: *mut c_void = *obj.get_ivar(BASEVIEW_STATE_IVAR);
 
@@ -476,11 +480,17 @@ unsafe impl HasRawWindowHandle for Window {
     fn raw_window_handle(&self) -> RawWindowHandle {
         let ns_window = self.ns_window.unwrap_or(ptr::null_mut()) as *mut c_void;
 
-        let mut handle = AppKitHandle::empty();
+        let mut handle = AppKitWindowHandle::empty();
         handle.ns_window = ns_window;
         handle.ns_view = self.ns_view as *mut c_void;
 
         RawWindowHandle::AppKit(handle)
+    }
+}
+
+unsafe impl HasRawDisplayHandle for Window {
+    fn raw_display_handle(&self) -> raw_window_handle::RawDisplayHandle {
+        RawDisplayHandle::AppKit(AppKitDisplayHandle::empty())
     }
 }
 

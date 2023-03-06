@@ -348,7 +348,7 @@ impl Window {
 
     #[cfg(feature = "opengl")]
     fn create_gl_context(ns_window: Option<id>, ns_view: id, config: GlConfig) -> GlContext {
-        let mut handle = AppKitHandle::empty();
+        let mut handle = AppKitWindowHandle::empty();
         handle.ns_window = ns_window.unwrap_or(ptr::null_mut()) as *mut c_void;
         handle.ns_view = ns_view as *mut c_void;
         let handle = RawWindowHandleWrapper { handle: RawWindowHandle::AppKit(handle) };

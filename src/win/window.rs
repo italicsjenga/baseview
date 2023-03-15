@@ -647,7 +647,7 @@ impl Window<'_> {
 
             #[cfg(feature = "opengl")]
             let gl_context: Option<GlContext> = options.gl_config.map(|gl_config| {
-                let mut handle = Win32Handle::empty();
+                let mut handle = Win32WindowHandle::empty();
                 handle.hwnd = hwnd as *mut c_void;
                 let handle = RawWindowHandleWrapper { handle: RawWindowHandle::Win32(handle) };
 
@@ -773,6 +773,6 @@ unsafe impl HasRawDisplayHandle for Window<'_> {
     }
 }
 
-pub fn copy_to_clipboard(data: &str) {
+pub fn copy_to_clipboard(_data: &str) {
     todo!()
 }

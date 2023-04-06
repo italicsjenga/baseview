@@ -27,6 +27,10 @@ pub(crate) struct RawWindowHandleWrapper {
     pub handle: RawWindowHandle,
 }
 
+pub(crate) struct RawDisplayHandleWrapper {
+    pub handle: RawDisplayHandle,
+}
+
 impl WindowHandle {
     fn new(window_handle: platform::WindowHandle) -> Self {
         Self { window_handle, phantom: PhantomData::default() }
@@ -145,6 +149,12 @@ unsafe impl<'a> HasRawDisplayHandle for Window<'a> {
 
 unsafe impl HasRawWindowHandle for RawWindowHandleWrapper {
     fn raw_window_handle(&self) -> RawWindowHandle {
+        self.handle
+    }
+}
+
+unsafe impl HasRawDisplayHandle for RawDisplayHandleWrapper {
+    fn raw_display_handle(&self) -> RawDisplayHandle {
         self.handle
     }
 }

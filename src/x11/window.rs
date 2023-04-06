@@ -15,8 +15,9 @@ use xcb::StructPtr;
 
 use super::XcbConnection;
 use crate::{
-    Event, MouseButton, MouseCursor, MouseEvent, PhyPoint, PhySize, ScrollDelta, Size, WindowEvent,
-    WindowHandler, WindowInfo, WindowOpenOptions, WindowScalePolicy,
+    Event, MouseButton, MouseCursor, MouseEvent, PhyPoint, PhySize, RawDisplayHandleWrapper,
+    ScrollDelta, Size, WindowEvent, WindowHandler, WindowInfo, WindowOpenOptions,
+    WindowScalePolicy,
 };
 
 use super::keyboard::{convert_key_press_event, convert_key_release_event, key_mods};
@@ -326,14 +327,19 @@ impl Window {
         //       compared to when raw-gl-context was a separate crate.
         #[cfg(feature = "opengl")]
         let gl_context = fb_config.map(|fb_config| {
-            let mut handle = XlibHandle::empty();
-            handle.window = window_id as c_ulong;
-            handle.display = xcb_connection.conn.get_raw_dpy() as *mut c_void;
-            let handle = RawWindowHandleWrapper { handle: RawWindowHandle::Xlib(handle) };
+            let mut window_handle = XlibWindowHandle::empty();
+            window_handle.window = window_id as c_ulong;
+            let mut display_handle = XlibDisplayHandle::empty();
+            display_handle.display = xcb_connection.conn.get_raw_dpy() as *mut c_void;
+            let window_handle =
+                RawWindowHandleWrapper { handle: RawWindowHandle::Xlib(window_handle) };
+            let display_handle =
+                RawDisplayHandleWrapper { handle: RawDisplayHandle::Xlib(display_handle) };
 
             // Because of the visual negotation we had to take some extra steps to create this context
-            let context = unsafe { platform::GlContext::create(&handle, fb_config) }
-                .expect("Could not create OpenGL context");
+            let context =
+                unsafe { platform::GlContext::create(&window_handle, &display_handle, fb_config) }
+                    .expect("Could not create OpenGL context");
             GlContext::new(context)
         });
 
@@ -716,6 +722,6 @@ fn mouse_id(id: u8) -> MouseButton {
     }
 }
 
-pub fn copy_to_clipboard(data: &str) {
+pub fn copy_to_clipboard(_data: &str) {
     todo!()
 }

@@ -1,7 +1,8 @@
 use std::marker::PhantomData;
 
 use raw_window_handle::{
-    HasRawDisplayHandle, HasRawWindowHandle, RawDisplayHandle, RawWindowHandle,
+    DisplayHandle, HasDisplayHandle, HasRawDisplayHandle, HasRawWindowHandle, HasWindowHandle,
+    RawDisplayHandle, RawWindowHandle,
 };
 
 use crate::event::{Event, EventStatus};
@@ -39,7 +40,7 @@ impl WindowHandle {
 }
 
 unsafe impl HasRawWindowHandle for WindowHandle {
-    fn raw_window_handle(&self) -> RawWindowHandle {
+    fn raw_window_handle(&self) -> Result<RawWindowHandle, raw_window_handle::HandleError> {
         self.window_handle.raw_window_handle()
     }
 }
@@ -110,14 +111,16 @@ impl<'a> Window<'a> {
     }
 }
 
-unsafe impl<'a> HasRawWindowHandle for Window<'a> {
-    fn raw_window_handle(&self) -> RawWindowHandle {
-        self.window.raw_window_handle()
+impl<'a> HasWindowHandle for Window<'a> {
+    fn window_handle(
+        &self,
+    ) -> Result<raw_window_handle::WindowHandle<'_>, raw_window_handle::HandleError> {
+        Ok(unsafe { raw_window_handle::WindowHandle::borrow_raw(self.window.raw_window_handle()?) })
     }
 }
 
-unsafe impl<'a> HasRawDisplayHandle for Window<'a> {
-    fn raw_display_handle(&self) -> RawDisplayHandle {
-        self.window.raw_display_handle()
+impl<'a> HasDisplayHandle for Window<'a> {
+    fn display_handle(&self) -> Result<DisplayHandle<'_>, raw_window_handle::HandleError> {
+        Ok(unsafe { DisplayHandle::borrow_raw(self.window.raw_display_handle()?) })
     }
 }

@@ -21,6 +21,7 @@ use winapi::um::winuser::{
 use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::collections::VecDeque;
 use std::ffi::{c_void, OsStr};
+use std::num::NonZeroIsize;
 use std::os::windows::ffi::OsStrExt;
 use std::ptr::null_mut;
 use std::rc::Rc;
@@ -84,15 +85,12 @@ impl WindowHandle {
 }
 
 unsafe impl HasRawWindowHandle for WindowHandle {
-    fn raw_window_handle(&self) -> RawWindowHandle {
-        if let Some(hwnd) = self.hwnd {
-            let mut handle = Win32WindowHandle::empty();
-            handle.hwnd = hwnd as *mut c_void;
-
-            RawWindowHandle::Win32(handle)
-        } else {
-            RawWindowHandle::Win32(Win32WindowHandle::empty())
-        }
+    fn raw_window_handle(&self) -> Result<RawWindowHandle, raw_window_handle::HandleError> {
+        self.hwnd
+            .and_then(|hwnd| NonZeroIsize::new(hwnd as isize))
+            .ok_or(raw_window_handle::HandleError::Unavailable)
+            .map(|v| Win32WindowHandle::new(v))
+            .map(|v| RawWindowHandle::Win32(v))
     }
 }
 
@@ -541,7 +539,7 @@ impl Window<'_> {
         B: Send + 'static,
     {
         let parent = match parent.raw_window_handle() {
-            RawWindowHandle::Win32(h) => h.hwnd as HWND,
+            Ok(RawWindowHandle::Win32(h)) => h.hwnd.get() as HWND,
             h => panic!("unsupported parent handle {:?}", h),
         };
 
@@ -638,9 +636,11 @@ impl Window<'_> {
 
             #[cfg(feature = "opengl")]
             let gl_context: Option<GlContext> = options.gl_config.map(|gl_config| {
-                let mut handle = Win32WindowHandle::empty();
-                handle.hwnd = hwnd as *mut c_void;
-                let handle = RawWindowHandle::Win32(handle);
+                let handle = NonZeroIsize::new(hwnd as isize)
+                    .ok_or(raw_window_handle::HandleError::Unavailable)
+                    .map(|v| Win32WindowHandle::new(v))
+                    .map(|v| RawWindowHandle::Win32(v))
+                    .unwrap();
 
                 GlContext::create(&handle, gl_config).expect("Could not create OpenGL context")
             });
@@ -760,17 +760,17 @@ impl Window<'_> {
 }
 
 unsafe impl HasRawWindowHandle for Window<'_> {
-    fn raw_window_handle(&self) -> RawWindowHandle {
-        let mut handle = Win32WindowHandle::empty();
-        handle.hwnd = self.state.hwnd as *mut c_void;
-
-        RawWindowHandle::Win32(handle)
+    fn raw_window_handle(&self) -> Result<RawWindowHandle, raw_window_handle::HandleError> {
+        NonZeroIsize::new(self.state.hwnd as isize)
+            .ok_or(raw_window_handle::HandleError::Unavailable)
+            .map(|v| Win32WindowHandle::new(v))
+            .map(|v| RawWindowHandle::Win32(v))
     }
 }
 
 unsafe impl HasRawDisplayHandle for Window<'_> {
-    fn raw_display_handle(&self) -> RawDisplayHandle {
-        RawDisplayHandle::Windows(WindowsDisplayHandle::empty())
+    fn raw_display_handle(&self) -> Result<RawDisplayHandle, raw_window_handle::HandleError> {
+        Ok(RawDisplayHandle::Windows(WindowsDisplayHandle::new()))
     }
 }
 
